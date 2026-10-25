@@ -3,7 +3,7 @@
   "name": "awesome-ai-plugins",
   "version": "1.0.0",
   "last_updated": "2026-10-25",
-  "total": 1017,
+  "total": 1018,
   "platforms": [
     "codex",
     "grok",
@@ -12397,6 +12397,19 @@
       "platform": "claude-code",
       "ecosystems": [
         "claude-code"
+      ]
+    },
+    {
+      "name": "QAmcp",
+      "url": "https://github.com/QAmcp/qamcp-cli",
+      "owner": "QAmcp",
+      "repo": "qamcp-cli",
+      "description": "Command-line tester for MCP servers: checks the connection, tool descriptions, safety labels, hidden instructions, bad inputs, leaked secrets and responses, with a GitHub Action for CI",
+      "category": "Tools & Integrations",
+      "source": "awesome-ai-plugins",
+      "platform": "standalone",
+      "ecosystems": [
+        "standalone"
       ]
     },
     {
