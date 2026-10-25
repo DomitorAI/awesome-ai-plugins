@@ -13319,6 +13319,20 @@
       "install_url": "https://raw.githubusercontent.com/fatwang2/Pulse/HEAD/plugins/claude-code/.claude-plugin/plugin.json"
     },
     {
+      "name": "QAmcp",
+      "displayName": "QAmcp",
+      "description": "Command-line tester for MCP servers: checks the connection, tool descriptions, safety labels, hidden instructions, bad inputs, leaked secrets and responses, with a GitHub Action for CI",
+      "category": "Tools & Integrations",
+      "source": "awesome-ai-plugins",
+      "platform": "standalone",
+      "ecosystems": [
+        "standalone"
+      ],
+      "owner": "QAmcp",
+      "repo": "qamcp-cli",
+      "url": "https://github.com/QAmcp/qamcp-cli"
+    },
+    {
       "name": "QVeris Agent Toolkit",
       "displayName": "QVeris Agent Toolkit",
       "description": "MCP server: connects AI assistants to [QVeris](https://qveris.ai/) professional data and tools through hosted Streamable HTTP or local stdio, with discovery, inspection, parameter validation, execution, and usage audits",
