@@ -364,6 +364,10 @@ def catalog_source_repos():
         try:
             with open(manifest_path, encoding="utf-8") as manifest_file:
                 manifest = json.load(manifest_file)
+        except FileNotFoundError:
+            # Imported listings can retain local links without bundling files.
+            # Their absence must not block unrelated GitHub listing notices.
+            continue
         except (ValueError, TypeError) as error:
             raise OSError(f"Invalid local plugin metadata for {repo}") from error
         upstream = manifest.get("repository") if isinstance(manifest, dict) else None

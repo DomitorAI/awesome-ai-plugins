@@ -20,6 +20,25 @@ SPEC.loader.exec_module(MODULE)
 
 
 class DeliveryRegressionTests(unittest.TestCase):
+    def test_imported_local_link_without_bundle_cannot_block_an_unrelated_notice(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "README.md").write_text(
+                "- [Plugin](https://github.com/owner/plugin) - Plugin\n"
+                "- [Imported](./plugins/mirror/alias) - Imported listing\n"
+            )
+            with patch.multiple(
+                MODULE, __file__=str(root / "scripts" / "post-claim-notice.py"),
+                GH_TOKEN="fixture", PR_NUMBER="217", REPO_FULL="owner/catalog",
+                PR_AUTHOR="author", PR_TITLE="Add plugin",
+            ), patch.object(MODULE, "has_existing_claim_comment", return_value=False), patch.object(
+                MODULE, "parse_pr_diff_for_repos", return_value={"owner/plugin"}
+            ), patch.object(MODULE, "fetch_catalog_repos", return_value=set()), patch.object(
+                MODULE, "post_comment", return_value=True
+            ) as post:
+                self.assertEqual(MODULE.main(), 0)
+                post.assert_called_once_with("author", {"owner/plugin"})
+
     def test_catalog_page_limit_cannot_block_a_merged_listing_notice(self):
         with patch.multiple(
             MODULE, GH_TOKEN="fixture", PR_NUMBER="993", REPO_FULL="owner/catalog",
@@ -213,6 +232,16 @@ class ClaimNoticeTests(unittest.TestCase):
 
 
 class NoticeEvidenceTests(unittest.TestCase):
+    def test_source_tolerates_imported_links_without_local_bundle_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "README.md").write_text(
+                "- [Imported](./plugins/mirror/alias) - Imported listing\n"
+                "- [Plugin](https://github.com/owner/plugin) - Plugin\n"
+            )
+            with patch.object(MODULE, "__file__", str(root / "scripts" / "post-claim-notice.py")):
+                self.assertEqual(MODULE.catalog_source_repos(), {"owner/plugin"})
+
     def test_source_accepts_exact_listing_links_only(self):
         readme = "\n".join([
             "- [Plugin](https://github.com/Owner/Plugin.git/tree/main) - Plugin",
