@@ -1,6 +1,8 @@
 name: Plugin Claim Notice
 
 on:
+  schedule:
+    - cron: "17 * * * *"
   pull_request_target:
     types:
       - closed
@@ -37,6 +39,10 @@ permissions:
   contents: read
   issues: read
 
+concurrency:
+  group: plugin-claim-notices
+  cancel-in-progress: false
+
 jobs:
   post-claim-notice:
     if: >-
@@ -60,7 +66,7 @@ jobs:
         run: python3 scripts/post-claim-notice.py
 
   backfill-claim-notices:
-    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'backfill'
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'backfill')
     name: Backfill claim instructions
     runs-on: ubuntu-latest
     steps:
@@ -72,6 +78,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BACKFILL_SINCE: ${{ inputs.backfill_since }}
-          BACKFILL_MAX_PRS: ${{ inputs.backfill_max_prs }}
+          BACKFILL_MAX_PRS: ${{ inputs.backfill_max_prs || '1000' }}
           REGISTRY_API: https://hol.org/registry/api/v1
         run: python3 scripts/backfill-claim-notices.py
