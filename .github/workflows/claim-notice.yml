@@ -62,8 +62,11 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           VERIFY_MERGED_PR: ${{ github.event_name == 'workflow_dispatch' }}
-          REGISTRY_API: https://hol.org/registry/api/v1
-        run: python3 scripts/post-claim-notice.py
+          REGISTRY_API: https://hol.org/api/v1
+          REGISTRY_BROKER_API_KEY: ${{ secrets.REGISTRY_BROKER_API_KEY }}
+        run: |
+          test -n "$REGISTRY_BROKER_API_KEY" || { echo "Missing catalog API key secret"; exit 1; }
+          python3 scripts/post-claim-notice.py
 
   backfill-claim-notices:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'backfill')
@@ -79,5 +82,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BACKFILL_SINCE: ${{ inputs.backfill_since }}
           BACKFILL_MAX_PRS: ${{ inputs.backfill_max_prs || '1000' }}
-          REGISTRY_API: https://hol.org/registry/api/v1
-        run: python3 scripts/backfill-claim-notices.py
+          REGISTRY_API: https://hol.org/api/v1
+          REGISTRY_BROKER_API_KEY: ${{ secrets.REGISTRY_BROKER_API_KEY }}
+        run: |
+          test -n "$REGISTRY_BROKER_API_KEY" || { echo "Missing catalog API key secret"; exit 1; }
+          python3 scripts/backfill-claim-notices.py
