@@ -340,6 +340,7 @@ Individually installable Agent Skills collections, rather than one client-specif
 - [Easy-MCP](https://github.com/Mark007-R/Easy-MCP) - Turns plain Python functions into secure MCP servers, with ready-made read-only GitHub and Postgres servers installable in one command.
 - [EditLens](https://github.com/mymotomaker-ai/EditLens) - EditLens highlights each Claude edit on the page you're building, with its file and line, and shows Claude's chat and code beside it.
 - [effect-actions](https://github.com/gjermundgaraba/effect-actions) - Agent skill and Effect library for defining a typed action once and serving it over HTTP, as MCP tools, as an AI Toolkit, and from a CLI.
+- [Eigenwise Toolshed](https://github.com/Eigenwise/eigenwise-toolshed) - Claude Code marketplace with seven independently installable plugins for local task boards, codebase mapping, model routing, quality checks, observability, project rules, and setup.
 - [ejentum-mcp](https://github.com/ejentum/ejentum-mcp) - MCP server exposing reasoning, code, anti-deception, and memory harness tools for Codex.
 - [Embedded Workbench](https://github.com/AmethystLuna/embedded-workbench) - Embedded C/C++ firmware development toolbox — 7 skills (FreeRTOS, Keil MDK, ARMCLANG, HardFault triage, state machines, LVGL) plus workflow gates and 4 agents for Claude Code, Codex, Cursor, Kimi, OpenCode, and ZCode.
 - [Emulo](https://github.com/ohad6k/emulo) - Mines selected evidence from local coding-agent sessions into private work, design, and writing profiles for Codex, Claude Code, and GitHub Copilot.
