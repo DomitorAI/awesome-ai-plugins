@@ -438,18 +438,43 @@ def merge_readme_additions(
     The upstream Codex catalog is the primary source. Plugins added directly
     to this repo's README (without a corresponding submission upstream) would
     otherwise never reach plugins.json or marketplace.json. This merges them
-    in, deduplicated by owner/repo, and probes for the manifest location so
-    plugins with non-root layouts get a working `install_url` instead of a
-    hardcoded path that 404s.
+    in, deduplicated by owner/repo except for separately named, verified
+    Claude Code marketplace plugins from one repository. Named bundles must
+    resolve to distinct real manifests; a second README line alone is not
+    proof of a second installable plugin.
     """
     seen = {key for key in (normalize_repo_key(p) for p in upstream) if key}
+    seen_named = {
+        (normalize_repo_key(p), str(p.get("name", "")).strip().casefold())
+        for p in upstream
+    }
     additions: list[dict] = []
     for plugin in parse_plugins(readme_path):
         key = normalize_repo_key(plugin)
         if not key:
             continue
+        named_key = (key, str(plugin.get("name", "")).strip().casefold())
 
         if key in seen:
+            # A Claude marketplace can contain distinct installable plugins
+            # even when all entries link to the same GitHub repository root.
+            # Add another only after its unique nested manifest resolves.
+            if resolve_install_urls and named_key not in seen_named:
+                found, manifest_url = probe_claude_marketplace(
+                    plugin["owner"], plugin["repo"], plugin["name"]
+                )
+                if found and manifest_url and not any(
+                    normalize_repo_key(existing) == key
+                    and existing.get("install_url") == manifest_url
+                    for existing in (*upstream, *additions)
+                ):
+                    plugin["install_url"] = manifest_url
+                    plugin.pop("installation_url", None)
+                    plugin["platform"] = "claude-code"
+                    plugin["ecosystems"] = ["claude-code"]
+                    additions.append(normalize_plugin(plugin))
+                    seen_named.add(named_key)
+                    continue
             # A repository can support multiple runtimes. Preserve a native
             # runtime contribution when the same repository already exists in
             # an upstream or earlier README catalog entry.
@@ -480,6 +505,7 @@ def merge_readme_additions(
             continue
 
         seen.add(key)
+        seen_named.add(named_key)
 
         if plugin.get("platform") in {MCP_PLATFORM, AGENT_SKILLS_PLATFORM}:
             additions.append(normalize_plugin(plugin))
