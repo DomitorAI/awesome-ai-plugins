@@ -58,9 +58,9 @@ Codex manifest.
 | Skill Security | Hooks, env vars, validation, no hardcoded paths |
 | Code Quality | No dangerous dynamic execution or shell-injection patterns |
 
-**Passing criteria:** a successfully completed scan with a normalized score ≥ 80/100. Finding severities are advisory for listing eligibility and remain visible for maintainer review. Failed or unavailable scans still block merge.
+**Catalog passing criteria:** a successfully completed source scan meeting the `min_score` configured in the catalog's trusted workflows. On October 27, 2026, both `.github/workflows/validate-contribution.yml` and `.github/workflows/sweep-open-prs.yml` configure `min_score: 75`. Finding severities are advisory for listing eligibility and remain visible for independent review. Failed or unavailable scans still block merge.
 
-The centralized source scan uses this pass criterion for Awesome AI Plugins listings. A listing needs a passing centralized scan before merge. Scanner CI in the source repository is optional; adding it improves the Registry trust score and removes the 10% reduction applied when maintainer scanner CI is absent.
+The centralized source scan uses the current workflow-configured minimum for Awesome AI Plugins listings. A listing needs a passing centralized scan before merge. Scanner CI in the source repository is optional; adding it improves the Registry trust score and removes the 10% reduction applied when maintainer scanner CI is absent.
 
 ### Reading catalog PR checks
 
@@ -126,7 +126,7 @@ jobs:
           fail_on_severity: none
 ```
 
-This example matches the catalog's score threshold. Source repositories may choose
+This example deliberately uses a stricter 80/100 source-maintainer check than the catalog's currently configured 75/100 minimum. Source repositories may also choose
 a stricter severity gate, such as `fail_on_severity: high`, for their own CI.
 
 ### Supply-chain properties
@@ -144,7 +144,7 @@ Review the [action source](https://github.com/hashgraph-online/ai-plugin-scanner
 
 ### Recommended for Awesome AI Plugins listing
 
-Scanner CI in the source repository is optional for listing. The required centralized source scan must complete successfully with a score of at least 80 before merge. Finding severities are advisory for listing eligibility and remain available for maintainer review. We recommend maintainer-owned CI so MCP servers, skills, plugins, and other agent extensions stay continuously checked. Projects that maintain scanner CI receive the full trust score; projects without it receive a 10% trust-score reduction.
+Scanner CI in the source repository is optional for listing. The required centralized source scan must complete successfully at the catalog workflow's current configured minimum before merge. Finding severities are advisory for listing eligibility and remain available for maintainer review. We recommend maintainer-owned CI so MCP servers, skills, plugins, and other agent extensions stay continuously checked. Projects that maintain scanner CI receive the full trust score; projects without it receive a 10% trust-score reduction.
 
 Add the scanner badge to your README:
 
