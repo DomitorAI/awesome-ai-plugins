@@ -641,6 +641,85 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             "/HEAD/token-bar/.claude-plugin/plugin.json",
         )
 
+    def test_distinct_named_claude_plugins_share_repository(self) -> None:
+        marketplace = (
+            b'{"name":"eigenwise-toolshed","plugins":['
+            b'{"name":"sidequest","source":"./plugins/sidequest"},'
+            b'{"name":"quality-gate","source":"./plugins/quality-gate"}]}'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n"
+                "### Development & Workflow\\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\\n"
+                "- [quality-gate](https://github.com/Eigenwise/eigenwise-toolshed) - Tests.\\n"
+            )
+            with patch(
+                "urllib.request.urlopen",
+                serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    "plugins/sidequest/.claude-plugin/plugin.json": None,
+                    "plugins/quality-gate/.claude-plugin/plugin.json": None,
+                }),
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+        self.assertEqual(added, 2)
+        self.assertEqual([p["name"] for p in plugins], ["sidequest", "quality-gate"])
+        self.assertEqual({p["platform"] for p in plugins}, {"claude-code"})
+        self.assertEqual(len({p["install_url"] for p in plugins}), 2)
+        marketplace_entries = [
+            MODULE.marketplace_entry(plugin) for plugin in plugins
+        ]
+        self.assertEqual(
+            [p["name"] for p in marketplace_entries], ["sidequest", "quality-gate"]
+        )
+
+    def test_same_manifest_cannot_be_published_under_two_names(self) -> None:
+        marketplace = b'{"plugins":[{"name":"sidequest","source":"./plugins/sidequest"}]}'
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n"
+                "### Development & Workflow\\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\\n"
+                "- [another name](https://github.com/Eigenwise/eigenwise-toolshed) - Same.\\n"
+            )
+            with patch(
+                "urllib.request.urlopen",
+                serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    "plugins/sidequest/.claude-plugin/plugin.json": None,
+                }),
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+        self.assertEqual(added, 1)
+        self.assertEqual([p["name"] for p in plugins], ["sidequest"])
+
+    def test_unverified_second_marketplace_name_remains_excluded(self) -> None:
+        marketplace = (
+            b'{"plugins":[{"name":"sidequest","source":"./plugins/sidequest"},'
+            b'{"name":"quality-gate","source":"./plugins/quality-gate"}]}'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n"
+                "### Development & Workflow\\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\\n"
+                "- [not-a-plugin](https://github.com/Eigenwise/eigenwise-toolshed) - Unknown.\\n"
+            )
+            with patch(
+                "urllib.request.urlopen",
+                serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    "plugins/sidequest/.claude-plugin/plugin.json": None,
+                }),
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+        self.assertEqual(added, 1)
+        self.assertEqual([p["name"] for p in plugins], ["sidequest"])
+
     def test_single_plugin_marketplace_resolves_under_another_name(self) -> None:
         marketplace = b'{"plugins": [{"name": "bar", "source": "plugins/bar/"}]}'
         with patch(
