@@ -72,12 +72,12 @@ to approve their own fork workflow through another account.
 
 The catalog's trusted centralized sweep is a separate check. Read its
 **original scan job log and sanitized findings artifact** to distinguish a
-completed numeric score below 80 from a scanner execution error. A generic
+completed numeric score below the configured minimum from a scanner execution error. A generic
 failed conclusion, absent artifact, or stale bot comment alone is not
 evidence of a measured score. Only a completed passing source scan for the
 current source revision, required catalog checks and independent review
 can advance a listing. Do not bypass a pending first-time workflow approval
-or lower the published threshold to clear a contribution.
+or interpret a status from an outdated bot comment alone.
 
 
 ### Grok plugin checks
