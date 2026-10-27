@@ -675,6 +675,49 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             [p["name"] for p in marketplace_entries], ["sidequest", "quality-gate"]
         )
 
+    def test_existing_upstream_bundle_and_distinct_nested_bundle(self) -> None:
+        # A Codex/upstream feed may already list one real Claude marketplace
+        # bundle. Another named manifest from that repository still qualifies.
+        marketplace = (
+            b'{"name":"eigenwise-toolshed","plugins":['
+            b'{"name":"sidequest","source":"./plugins/sidequest"},'
+            b'{"name":"quality-gate","source":"./plugins/quality-gate"}]}'
+        )
+        upstream = [{
+            "name": "sidequest",
+            "owner": "Eigenwise",
+            "repo": "eigenwise-toolshed",
+            "url": "https://github.com/Eigenwise/eigenwise-toolshed",
+            "platform": "claude-code",
+            "ecosystems": ["claude-code"],
+            "install_url": (
+                "https://raw.githubusercontent.com/Eigenwise/eigenwise-toolshed"
+                "/HEAD/plugins/sidequest/.claude-plugin/plugin.json"
+            ),
+        }]
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\n"
+                "- [quality-gate](https://github.com/Eigenwise/eigenwise-toolshed) - Tests.\n"
+            )
+            with patch(
+                "urllib.request.urlopen",
+                serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    "plugins/sidequest/.claude-plugin/plugin.json": None,
+                    "plugins/quality-gate/.claude-plugin/plugin.json": None,
+                }),
+            ):
+                plugins, added = MODULE.merge_readme_additions(upstream, readme)
+
+        self.assertEqual(added, 1)
+        self.assertEqual([p["name"] for p in plugins], ["sidequest", "quality-gate"])
+        self.assertEqual(len({p["install_url"] for p in plugins}), 2)
+        self.assertEqual({p["platform"] for p in plugins}, {"claude-code"})
+
     def test_same_manifest_cannot_be_published_under_two_names(self) -> None:
         marketplace = b'{"plugins":[{"name":"sidequest","source":"./plugins/sidequest"}]}'
         with tempfile.TemporaryDirectory() as directory:
