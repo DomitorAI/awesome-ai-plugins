@@ -650,10 +650,10 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n"
-                "### Development & Workflow\\n"
-                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\\n"
-                "- [quality-gate](https://github.com/Eigenwise/eigenwise-toolshed) - Tests.\\n"
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\n"
+                "- [quality-gate](https://github.com/Eigenwise/eigenwise-toolshed) - Tests.\n"
             )
             with patch(
                 "urllib.request.urlopen",
@@ -680,10 +680,10 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n"
-                "### Development & Workflow\\n"
-                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\\n"
-                "- [another name](https://github.com/Eigenwise/eigenwise-toolshed) - Same.\\n"
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\n"
+                "- [another name](https://github.com/Eigenwise/eigenwise-toolshed) - Same.\n"
             )
             with patch(
                 "urllib.request.urlopen",
@@ -704,10 +704,10 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n"
-                "### Development & Workflow\\n"
-                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\\n"
-                "- [not-a-plugin](https://github.com/Eigenwise/eigenwise-toolshed) - Unknown.\\n"
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Tasks.\n"
+                "- [not-a-plugin](https://github.com/Eigenwise/eigenwise-toolshed) - Unknown.\n"
             )
             with patch(
                 "urllib.request.urlopen",
