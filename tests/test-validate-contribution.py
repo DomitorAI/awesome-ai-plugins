@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import importlib.util
 import json
 import sys
@@ -221,6 +222,71 @@ class ValidateContributionTests(unittest.TestCase):
         entries = MODULE.get_new_readme_entries_from_diff(diff, base, head)
 
         self.assertEqual([entry.repo for entry in entries], ["moved-plugin"])
+
+
+    def test_modified_existing_listing_requires_fresh_centralized_scan(self) -> None:
+        base = (
+            "## Community Plugins\n"
+            "- [Example Plugin](https://github.com/example/plugin) - Version 2.0.1.\n"
+        )
+        head = base.replace("Version 2.0.1.", "Version 2.1.0.")
+        diff = "".join(
+            difflib.unified_diff(
+                base.splitlines(keepends=True),
+                head.splitlines(keepends=True),
+                fromfile="README.md",
+                tofile="README.md",
+                n=0,
+            )
+        )
+
+        entries = MODULE.get_new_readme_entries_from_diff(diff, base, head)
+
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].repo, "plugin")
+        self.assertIn("2.1.0", entries[0].description)
+
+    def test_existing_listing_renamed_requires_fresh_centralized_scan(self) -> None:
+        base = (
+            "## Community Plugins\n"
+            "- [Old Plugin Name](https://github.com/example/plugin) - Same source.\n"
+        )
+        head = base.replace("[Old Plugin Name]", "[New Plugin Name]")
+        diff = "".join(
+            difflib.unified_diff(
+                base.splitlines(keepends=True),
+                head.splitlines(keepends=True),
+                fromfile="README.md",
+                tofile="README.md",
+                n=0,
+            )
+        )
+
+        entries = MODULE.get_new_readme_entries_from_diff(diff, base, head)
+
+        self.assertEqual([entry.display_name for entry in entries], ["New Plugin Name"])
+
+    def test_identical_listing_reorder_does_not_rescan(self) -> None:
+        base = (
+            "## Community Plugins\n"
+            "- [Alpha](https://github.com/example/alpha) - Alpha plugin.\n"
+            "- [Beta](https://github.com/example/beta) - Beta plugin.\n"
+        )
+        head = (
+            "## Community Plugins\n"
+            "- [Beta](https://github.com/example/beta) - Beta plugin.\n"
+            "- [Alpha](https://github.com/example/alpha) - Alpha plugin.\n"
+        )
+        diff = "".join(
+            difflib.unified_diff(
+                base.splitlines(keepends=True),
+                head.splitlines(keepends=True),
+                fromfile="README.md",
+                tofile="README.md",
+                n=0,
+            )
+        )
+        self.assertEqual(MODULE.get_new_readme_entries_from_diff(diff, base, head), [])
 
 
 class PublishOpenPrChecksTests(unittest.TestCase):
