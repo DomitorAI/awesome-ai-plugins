@@ -272,7 +272,8 @@ class PublishOpenPrChecksTests(unittest.TestCase):
             {12: ["failure"]},
         )
         self.assertEqual(conclusion, "failure")
-        self.assertEqual(title, "Centralized score not established")
+        self.assertEqual(title, "Centralized scan did not pass")
+        self.assertIn("job conclusion alone cannot distinguish", summary)
         self.assertIn("advisory", summary.lower())
         comment = self.publisher.remediation_comment(
             result,
