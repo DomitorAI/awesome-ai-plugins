@@ -908,6 +908,29 @@ class GeneratePluginsJsonTests(unittest.TestCase):
                         (True, None),
                     )
 
+    def test_rejects_url_delimiters_in_marketplace_source_paths(self) -> None:
+        # A query or fragment must not change which manifest a raw URL probes.
+        # Simulate a 200 response for the malformed target: successful HTTP
+        # alone must not certify a repository-relative plugin directory.
+        for source in ("plugins/demo?branch=main", "plugins/demo#preview"):
+            with self.subTest(source=source):
+                marketplace = json.dumps({
+                    "plugins": [{"name": "demo", "source": source}]
+                }).encode("utf-8")
+                with patch(
+                    "urllib.request.urlopen",
+                    side_effect=serves({
+                        ".claude-plugin/marketplace.json": marketplace,
+                        f"{source}/.claude-plugin/plugin.json": None,
+                    }),
+                ) as urlopen:
+                    self.assertEqual(
+                        MODULE.probe_claude_marketplace("example", "mods", "demo"),
+                        (True, None),
+                    )
+                    # Invalid paths are rejected before any manifest HEAD.
+                    self.assertEqual(urlopen.call_count, 1)
+
     def test_rejects_control_characters_in_marketplace_sources(self) -> None:
         # Reject invalid URL characters before even attempting the manifest
         # probe; malformed upstream metadata must not abort catalog generation.
