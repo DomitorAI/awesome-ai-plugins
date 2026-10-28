@@ -190,6 +190,10 @@ def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, st
     # apparently valid raw.githubusercontent.com install targets.
     if source.startswith("/") or "\\" in source:
         return True, None
+    # Untrusted marketplace JSON can contain control bytes which a later HTTP
+    # request rejects as an invalid URL, aborting the entire catalog build.
+    if any(ord(char) < 0x20 or ord(char) == 0x7F for char in source):
+        return True, None
     # Marketplace source directories must be literal repository-relative paths.
     # Percent-encoded bytes can be decoded by an intermediary after the
     # traversal check, changing which plugin manifest the URL resolves to.
