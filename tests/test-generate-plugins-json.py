@@ -1377,6 +1377,28 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             ):
                 self.assertEqual(MODULE.probe_claude_marketplace("example", "mods", "x"), (True, None))
 
+    def test_rejects_windows_drive_and_stream_marketplace_sources(self) -> None:
+        # Source directories must be portable, not drive-qualified or NTFS
+        # alternate streams. Even an HTTP 200 must not certify these paths.
+        for source in ("C:/plugins/demo", "plugins/demo:alternate", "C:relative"):
+            with self.subTest(source=source):
+                marketplace = json.dumps({
+                    "plugins": [{"name": "demo", "source": source}]
+                }).encode("utf-8")
+                encoded = source.replace(":", "%3A")
+                with patch(
+                    "urllib.request.urlopen",
+                    side_effect=serves({
+                        ".claude-plugin/marketplace.json": marketplace,
+                        f"{encoded}/.claude-plugin/plugin.json": None,
+                    }),
+                ) as urlopen:
+                    self.assertEqual(
+                        MODULE.probe_claude_marketplace("example", "mods", "demo"),
+                        (True, None),
+                    )
+                    self.assertEqual(urlopen.call_count, 1)
+
     def test_rejects_percent_encoded_marketplace_paths(self) -> None:
         # Marketplace source is a directory path, not a URL. Encoded dot/slash
         # segments can be decoded after the initial traversal check.
