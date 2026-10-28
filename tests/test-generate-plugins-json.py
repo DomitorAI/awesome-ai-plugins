@@ -1572,7 +1572,7 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         )
         with patch(
             "urllib.request.urlopen",
-            serves({".claude-plugin/marketplace.json": malformed}),
+            side_effect=serves({".claude-plugin/marketplace.json": malformed}),
         ) as urlopen:
             self.assertEqual(
                 MODULE.probe_claude_marketplace("example", "mods", "demo"),
