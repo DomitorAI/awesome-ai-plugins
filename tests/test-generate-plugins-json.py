@@ -359,6 +359,53 @@ class GeneratePluginsJsonTests(unittest.TestCase):
                 self.assertEqual(len(plugins), 1)
                 self.assertEqual(plugins[0]["ecosystems"], ["codex", platform])
 
+    def test_native_mcp_stays_separate_from_multiple_claude_bundles(self) -> None:
+        # A repository can contain two separately installable Claude plugins
+        # plus its own MCP server. The native entry must not inherit the first
+        # unrelated Claude bundle's platform, name, or manifest install URL.
+        upstream = [
+            {
+                "name": name,
+                "owner": "example",
+                "repo": "shared",
+                "platform": "claude-code",
+                "ecosystems": ["claude-code"],
+                "install_url": (
+                    "https://raw.githubusercontent.com/example/shared/HEAD/"
+                    f"plugins/{slug}/.claude-plugin/plugin.json"
+                ),
+            }
+            for name, slug in (
+                ("Sidequest", "sidequest"),
+                ("Quality Gate", "quality-gate"),
+            )
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n"
+                "### Development & Workflow\\n"
+                "- [Native Tools](https://github.com/example/shared)"
+                " - MCP server: Native stdio tools.\\n"
+            )
+            with patch.object(
+                MODULE, "probe_claude_marketplace",
+                side_effect=AssertionError("native MCP entry must not probe Claude"),
+            ):
+                plugins, added = MODULE.merge_readme_additions(upstream, readme)
+
+        self.assertEqual(added, 1)
+        self.assertEqual(len(plugins), 3)
+        self.assertEqual([p["platform"] for p in plugins], [
+            "claude-code", "claude-code", "mcp",
+        ])
+        self.assertEqual([p["ecosystems"] for p in plugins[:2]], [
+            ["claude-code"], ["claude-code"],
+        ])
+        self.assertEqual(plugins[2]["name"], "Native Tools")
+        self.assertIn("installation_url", plugins[2])
+        self.assertNotIn("install_url", plugins[2])
+
     def test_native_mcp_fallback_generates_no_invented_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
