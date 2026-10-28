@@ -156,7 +156,10 @@ def probe_claude_marketplace(
         if len(payload) > CLAUDE_MARKETPLACE_MAX_BYTES:
             return True, None
         marketplace = json.loads(payload.decode("utf-8"))
-    except ValueError:
+    except (ValueError, RecursionError):
+        # Even a byte-bounded JSON body may exceed the decoder's nesting
+        # limit. Treat malformed source metadata as unresolved, not fatal
+        # to generation of unrelated catalog entries.
         return True, None
 
     entries = marketplace.get("plugins") if isinstance(marketplace, dict) else None
