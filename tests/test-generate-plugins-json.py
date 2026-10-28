@@ -911,8 +911,8 @@ class GeneratePluginsJsonTests(unittest.TestCase):
     def test_rejects_control_characters_in_marketplace_sources(self) -> None:
         # Reject invalid URL characters before even attempting the manifest
         # probe; malformed upstream metadata must not abort catalog generation.
-        for source in ("plugins/name\\nbad", "plugins/name\\rhidden",
-                       "plugins/name\\tbad", "plugins/name\\u0000bad"):
+        for source in ("plugins/name\nbad", "plugins/name\rhidden",
+                       "plugins/name\tbad", "plugins/name\u0000bad"):
             with self.subTest(source=repr(source)):
                 marketplace = json.dumps({
                     "plugins": [{"name": "x", "source": source}]
