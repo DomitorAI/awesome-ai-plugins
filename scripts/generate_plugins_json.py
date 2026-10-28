@@ -189,7 +189,7 @@ def probe_claude_marketplace(
     # Only a directory inside this repo; remote sources (objects, URLs) have
     # their own manifests elsewhere.
     source = entry.get("source")
-    if not isinstance(source, str) or "://" in source:
+    if not isinstance(source, str) or not source.strip() or "://" in source:
         return True, None
     # Absolute paths and Windows-style separators are not a source directory
     # inside the marketplace repository. Do not silently convert them into
