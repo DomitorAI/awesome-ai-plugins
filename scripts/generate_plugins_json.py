@@ -162,6 +162,7 @@ def probe_claude_marketplace(
     entries = marketplace.get("plugins") if isinstance(marketplace, dict) else None
     if not isinstance(entries, list):
         return True, None
+    original_entry_count = len(entries)
     entries = [e for e in entries if isinstance(e, dict)]
     # Prefer an exact source name. Human-readable README labels such as
     # "Codebase Mapper" must also resolve the source slug "codebase-mapper"
@@ -181,7 +182,7 @@ def probe_claude_marketplace(
         ]
     if len(named) == 1:
         entry = named[0]
-    elif len(entries) == 1 and not require_named_match:
+    elif original_entry_count == 1 and len(entries) == 1 and not require_named_match:
         # Legacy single-plugin marketplace aliases may use a README label.
         # A second entry for an already-listed repository must match its real
         # source name, not acquire an arbitrary alias via this fallback.
