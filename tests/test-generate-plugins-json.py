@@ -924,6 +924,52 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             [p["name"] for p in marketplace_entries], ["sidequest", "quality-gate"]
         )
 
+    def test_seven_eigenwise_bundles_keep_distinct_manifests(self) -> None:
+        # Current upstream Toolshed publishes seven separately named Claude
+        # bundles from one repo. No first-bundle aliasing is permissible.
+        names = ["observability","model-gateway","sidequest","codebase-mapper","quartermaster","quality-gate","live-rules"]
+        marketplace = json.dumps({
+            "plugins": [
+                {"name": name, "source": f"./plugins/{name}"}
+                for name in names
+            ],
+        }).encode("utf-8")
+        manifests = {
+            f"plugins/{name}/.claude-plugin/plugin.json": None
+            for name in names
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\n### Development & Workflow\n"
+                + "".join(
+                    f"- [{name}](https://github.com/Eigenwise/eigenwise-toolshed) - Plugin.\n"
+                    for name in names
+                ),
+                encoding="utf-8",
+            )
+            with patch(
+                "urllib.request.urlopen",
+                side_effect=serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    **manifests,
+                }),
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+        self.assertEqual(added, 7)
+        self.assertEqual([p["name"] for p in plugins], names)
+        urls = [p["install_url"] for p in plugins]
+        self.assertEqual(len(set(urls)), 7)
+        for name, url in zip(names, urls):
+            self.assertEqual(
+                url,
+                "https://raw.githubusercontent.com/Eigenwise/eigenwise-toolshed"
+                f"/HEAD/plugins/{name}/.claude-plugin/plugin.json",
+            )
+        self.assertEqual(
+            {p["platform"] for p in plugins}, {"claude-code"}
+        )
+
     def test_shared_repo_first_bundle_prefers_named_marketplace_over_root(self) -> None:
         # An unrelated root plugin.json must not become the install target of
         # the first named bundle merely because the generic HEAD probe wins.
