@@ -108,6 +108,80 @@ class GeneratorOutputSafetyTests(unittest.TestCase):
             self.assertFalse((root / "plugins.json").exists())
             self.assertFalse((root / ".agents/plugins/marketplace.json").exists())
 
+    def test_grok_feed_does_not_claim_unrelated_claude_bundles(self):
+        # A shared GitHub repo is not proof that every independently named
+        # Claude bundle implements every Grok plugin from that repository.
+        codex = [
+            {
+                "name": name, "owner": "example", "repo": "shared",
+                "platform": "claude-code", "ecosystems": ["claude-code"],
+                "install_url": f"https://example.test/{slug}/plugin.json",
+            }
+            for name, slug in (("Sidequest", "sidequest"),
+                               ("Quality Gate", "quality-gate"))
+        ]
+        grok = [
+            {"name": "Unrelated Grok", "owner": "example", "repo": "shared",
+             "platform": "grok", "ecosystems": ["grok"]},
+            {"name": "Another Grok", "owner": "example", "repo": "shared",
+             "platform": "grok", "ecosystems": ["grok"]},
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            with (
+                patch.object(MODULE, "load_codex_plugins", return_value=codex),
+                patch.object(MODULE, "load_grok_plugins", return_value=grok),
+                patch.object(
+                    MODULE, "merge_readme_additions",
+                    side_effect=lambda plugins, _readme, **_kwargs: (plugins, 0),
+                ),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                MODULE.main(["--output-dir", folder])
+            plugins = json.loads(
+                (Path(folder) / "plugins.json").read_text()
+            )["plugins"]
+        self.assertEqual(len(plugins), 4)
+        self.assertEqual([p["name"] for p in plugins], [
+            "Sidequest", "Quality Gate", "Unrelated Grok", "Another Grok",
+        ])
+        self.assertEqual(
+            [p["ecosystems"] for p in plugins],
+            [["claude-code"], ["claude-code"], ["grok"], ["grok"]],
+        )
+
+    def test_grok_feed_matches_one_real_named_bundle_only(self):
+        codex = [
+            {"name": name, "owner": "example", "repo": "shared",
+             "platform": "claude-code", "ecosystems": ["claude-code"]}
+            for name in ("Sidequest", "Quality Gate")
+        ]
+        grok = [
+            {"name": "Quality Gate", "owner": "example", "repo": "shared",
+             "platform": "grok", "ecosystems": ["grok"]},
+            {"name": "New Grok", "owner": "example", "repo": "shared",
+             "platform": "grok", "ecosystems": ["grok"]},
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            with (
+                patch.object(MODULE, "load_codex_plugins", return_value=codex),
+                patch.object(MODULE, "load_grok_plugins", return_value=grok),
+                patch.object(
+                    MODULE, "merge_readme_additions",
+                    side_effect=lambda plugins, _readme, **_kwargs: (plugins, 0),
+                ),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                MODULE.main(["--output-dir", folder])
+            plugins = json.loads(
+                (Path(folder) / "plugins.json").read_text()
+            )["plugins"]
+        self.assertEqual([p["name"] for p in plugins], [
+            "Sidequest", "Quality Gate", "New Grok",
+        ])
+        self.assertEqual([p["ecosystems"] for p in plugins], [
+            ["claude-code"], ["claude-code", "grok"], ["grok"],
+        ])
+
     def test_require_upstreams_with_both_sources_writes_both_feeds(self):
         codex = {"name": "Codex Demo", "owner": "test", "repo": "codex"}
         grok = {"name": "Grok Demo", "owner": "test", "repo": "grok"}
