@@ -792,6 +792,67 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             [p["name"] for p in marketplace_entries], ["sidequest", "quality-gate"]
         )
 
+    def test_shared_repo_first_bundle_prefers_named_marketplace_over_root(self) -> None:
+        # An unrelated root plugin.json must not become the install target of
+        # the first named bundle merely because the generic HEAD probe wins.
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n### Development & Workflow\\n"
+                "- [Sidequest](https://github.com/example/shared) - Tasks.\\n"
+                "- [Quality Gate](https://github.com/example/shared) - Tests.\\n"
+            )
+            def named_probe(owner, repo, name, *, require_named_match=False):
+                self.assertTrue(require_named_match)
+                slug = {"Sidequest": "sidequest", "Quality Gate": "quality-gate"}[name]
+                return True, (
+                    "https://raw.githubusercontent.com/example/shared/HEAD/"
+                    f"plugins/{slug}/.claude-plugin/plugin.json"
+                )
+            with (
+                patch.object(MODULE, "probe_claude_marketplace", side_effect=named_probe),
+                patch.object(
+                    MODULE, "probe_install_url",
+                    return_value="https://raw.githubusercontent.com/example/shared/HEAD/"
+                                 ".claude-plugin/plugin.json",
+                ) as root_probe,
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+            root_probe.assert_not_called()
+        self.assertEqual(added, 2)
+        self.assertEqual([p["name"] for p in plugins], ["Sidequest", "Quality Gate"])
+        self.assertEqual({p["platform"] for p in plugins}, {"claude-code"})
+        self.assertEqual(
+            [p["install_url"].split("/HEAD/")[1] for p in plugins],
+            ["plugins/sidequest/.claude-plugin/plugin.json",
+             "plugins/quality-gate/.claude-plugin/plugin.json"],
+        )
+
+    def test_unverified_first_named_bundle_does_not_alias_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n### Development & Workflow\\n"
+                "- [Unlisted](https://github.com/example/shared) - Unknown.\\n"
+                "- [Sidequest](https://github.com/example/shared) - Tasks.\\n"
+            )
+            def named_probe(owner, repo, name, *, require_named_match=False):
+                self.assertTrue(require_named_match)
+                if name == "Unlisted":
+                    return True, None
+                return True, (
+                    "https://raw.githubusercontent.com/example/shared/HEAD/"
+                    "plugins/sidequest/.claude-plugin/plugin.json"
+                )
+            with (
+                patch.object(MODULE, "probe_claude_marketplace", side_effect=named_probe),
+                patch.object(MODULE, "probe_install_url") as root_probe,
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+            root_probe.assert_not_called()
+        self.assertEqual(added, 1)
+        self.assertEqual([p["name"] for p in plugins], ["Sidequest"])
+
     def test_readable_names_match_exact_unique_marketplace_slugs(self) -> None:
         # Real Claude marketplaces use slug names while README catalog rows
         # display human-readable labels. Both must resolve distinct manifests.
