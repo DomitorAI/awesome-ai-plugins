@@ -887,6 +887,37 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         self.assertEqual(added, 1)
         self.assertEqual([p["name"] for p in plugins], ["sidequest"])
 
+    def test_existing_repo_cannot_publish_unmatched_single_marketplace_alias(self) -> None:
+        # A README alias is not source evidence for a *second* installable
+        # plugin when the repository already has a catalog entry.
+        marketplace = b'{"plugins":[{"name":"actual-plugin","source":"./plugins/actual-plugin"}]}'
+        upstream = [{
+            "name": "Existing Codex integration",
+            "owner": "example", "repo": "mods",
+            "platform": "codex", "ecosystems": ["codex"],
+            "install_url": "https://raw.githubusercontent.com/example/mods/HEAD/.codex-plugin/plugin.json",
+        }]
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n"
+                "### Development & Workflow\\n"
+                "- [Invented alias](https://github.com/example/mods) - An unverified second name.\\n"
+            )
+            with patch(
+                "urllib.request.urlopen",
+                side_effect=serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    "plugins/actual-plugin/.claude-plugin/plugin.json": None,
+                }),
+            ) as urlopen:
+                plugins, added = MODULE.merge_readme_additions(upstream, readme)
+        self.assertEqual(added, 0)
+        self.assertEqual(len(plugins), 1)
+        self.assertEqual(plugins[0]["name"], "Existing Codex integration")
+        # The unverified alias cannot even trigger a manifest acceptance HEAD.
+        self.assertEqual(urlopen.call_count, 1)
+
     def test_single_plugin_marketplace_resolves_under_another_name(self) -> None:
         marketplace = b'{"plugins": [{"name": "bar", "source": "plugins/bar/"}]}'
         with patch(
