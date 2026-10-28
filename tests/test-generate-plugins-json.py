@@ -1377,6 +1377,26 @@ class GeneratePluginsJsonTests(unittest.TestCase):
                     # Invalid paths are rejected before any manifest HEAD.
                     self.assertEqual(urlopen.call_count, 1)
 
+    def test_rejects_json_escaped_unpaired_surrogates_before_url_encoding(self) -> None:
+        # JSON accepts escaped lone surrogates but urllib.parse.quote cannot
+        # encode them to UTF-8. One bad upstream entry must not abort the feed.
+        for source in ("plugins/\\ud800", "plugins/\\udfff"):
+            with self.subTest(source=repr(source)):
+                marketplace = json.dumps({
+                    "plugins": [{"name": "demo", "source": source}]
+                }).encode("utf-8")
+                with patch(
+                    "urllib.request.urlopen",
+                    side_effect=serves({
+                        ".claude-plugin/marketplace.json": marketplace,
+                    }),
+                ) as urlopen:
+                    self.assertEqual(
+                        MODULE.probe_claude_marketplace("example", "mods", "demo"),
+                        (True, None),
+                    )
+                    self.assertEqual(urlopen.call_count, 1)
+
     def test_rejects_control_characters_in_marketplace_sources(self) -> None:
         # Reject invalid URL characters before even attempting the manifest
         # probe; malformed upstream metadata must not abort catalog generation.
