@@ -900,9 +900,9 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n"
-                "### Development & Workflow\\n"
-                "- [Invented alias](https://github.com/example/mods) - An unverified second name.\\n"
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
+                "- [Invented alias](https://github.com/example/mods) - An unverified second name.\n"
             )
             with patch(
                 "urllib.request.urlopen",
