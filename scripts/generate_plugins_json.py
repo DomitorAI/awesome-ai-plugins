@@ -199,6 +199,11 @@ def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, st
     # traversal check, changing which plugin manifest the URL resolves to.
     if re.search(r"%[0-9a-fA-F]{2}", source):
         return True, None
+    # These URL delimiters are not literal directory separators. Including
+    # either in an unquoted raw GitHub URL can select a different resource
+    # from the nested manifest claimed by the marketplace entry.
+    if "?" in source or "#" in source:
+        return True, None
     parts = [part for part in source.split("/") if part not in {"", "."}]
     if any(part == ".." for part in parts):
         return True, None
