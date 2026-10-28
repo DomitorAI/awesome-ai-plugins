@@ -1507,6 +1507,18 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             self.assertEqual((plugins, added), ([], 0))
             root_probe.assert_not_called()
 
+    def test_bad_root_manifest_head_reply_does_not_abort_catalog(self) -> None:
+        import http.client
+
+        with patch(
+            "urllib.request.urlopen",
+            side_effect=http.client.BadStatusLine("broken root manifest HEAD"),
+        ) as fetch:
+            self.assertIsNone(
+                MODULE.probe_install_url("example", "mods")
+            )
+            self.assertEqual(fetch.call_count, 1)
+
     def test_bad_nested_manifest_head_response_is_a_source_miss(self) -> None:
         import http.client
 
