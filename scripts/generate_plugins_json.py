@@ -506,7 +506,11 @@ def merge_readme_additions(
                 )
                 for existing in (*upstream, *additions)
             )
-            if resolve_install_urls and not already_claude_named:
+            if (
+                resolve_install_urls
+                and not already_claude_named
+                and plugin.get("platform") in (None, "claude-code")
+            ):
                 found, manifest_url = probe_claude_marketplace(
                     plugin["owner"], plugin["repo"], plugin["name"]
                 )
