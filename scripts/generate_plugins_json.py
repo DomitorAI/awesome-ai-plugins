@@ -113,9 +113,9 @@ def probe_install_url(
                     return url
         except urllib.error.HTTPError:
             continue
-        except (urllib.error.URLError, TimeoutError, OSError):
-            # Network unavailable — callers may retain a documentation link,
-            # but must not claim an unverified client-specific manifest.
+        except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException):
+            # Malformed upstream HTTP replies are not verified manifests.
+            # Keep unrelated catalog generation alive on a failed HEAD probe.
             return None
     return None
 
