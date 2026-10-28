@@ -1450,6 +1450,28 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         self.assertEqual(plugins[0]["platform"], "claude-code")
         self.assertNotIn("install_url", MODULE.marketplace_entry(plugins[0]))
 
+    def test_truncated_marketplace_http_body_does_not_abort_catalog(self) -> None:
+        import http.client
+
+        class TruncatedResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                return None
+
+            def read(self, _limit):
+                raise http.client.IncompleteRead(b'{"plugins":[', 20)
+
+        with patch("urllib.request.urlopen", return_value=TruncatedResponse()) as fetch:
+            self.assertEqual(
+                MODULE.probe_claude_marketplace(
+                    "example", "mods", "sidequest", require_named_match=True,
+                ),
+                (False, None),
+            )
+            self.assertEqual(fetch.call_count, 1)
+
     def test_unreadable_marketplace_has_no_install_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             readme = claude_marketplace_readme(directory, "token-bar")
