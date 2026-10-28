@@ -124,7 +124,9 @@ CLAUDE_MANIFEST_PATH = ".claude-plugin/plugin.json"
 CLAUDE_MARKETPLACE_MAX_BYTES = 1024 * 1024
 
 
-def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, str | None]:
+def probe_claude_marketplace(
+    owner: str, repo: str, name: str, *, require_named_match: bool = False
+) -> tuple[bool, str | None]:
     """Resolve a Claude Code plugin listed in the repo's root marketplace.
 
     A Claude Code marketplace repo keeps `.claude-plugin/marketplace.json` at
@@ -176,7 +178,10 @@ def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, st
         ]
     if len(named) == 1:
         entry = named[0]
-    elif len(entries) == 1:
+    elif len(entries) == 1 and not require_named_match:
+        # Legacy single-plugin marketplace aliases may use a README label.
+        # A second entry for an already-listed repository must match its real
+        # source name, not acquire an arbitrary alias via this fallback.
         entry = entries[0]
     else:
         return True, None
@@ -512,7 +517,8 @@ def merge_readme_additions(
                 and plugin.get("platform") in (None, "claude-code")
             ):
                 found, manifest_url = probe_claude_marketplace(
-                    plugin["owner"], plugin["repo"], plugin["name"]
+                    plugin["owner"], plugin["repo"], plugin["name"],
+                    require_named_match=True,
                 )
                 if found and manifest_url and not any(
                     normalize_repo_key(existing) == key
