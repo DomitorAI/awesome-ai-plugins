@@ -157,7 +157,22 @@ def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, st
     if not isinstance(entries, list):
         return True, None
     entries = [e for e in entries if isinstance(e, dict)]
-    named = [e for e in entries if str(e.get("name", "")).lower() == name.lower()]
+    # Prefer an exact source name. Human-readable README labels such as
+    # "Codebase Mapper" must also resolve the source slug "codebase-mapper"
+    # when (and only when) the normalized marketplace match is unambiguous.
+    raw_target = name.strip().casefold()
+    named = [
+        e for e in entries
+        if isinstance(e.get("name"), str)
+        and e["name"].strip().casefold() == raw_target
+    ]
+    if not named:
+        slug_target = re.sub(r"[\\s_-]+", "-", raw_target)
+        named = [
+            e for e in entries
+            if isinstance(e.get("name"), str)
+            and re.sub(r"[\\s_-]+", "-", e["name"].strip().casefold()) == slug_target
+        ]
     if len(named) == 1:
         entry = named[0]
     elif len(entries) == 1:
