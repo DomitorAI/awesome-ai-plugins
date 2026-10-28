@@ -1024,6 +1024,27 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             "/HEAD/plugins/bar/.claude-plugin/plugin.json",
         )
 
+    def test_blank_marketplace_source_never_uses_root_manifest(self) -> None:
+        # Empty or whitespace-only source must not accidentally claim a
+        # repository-root plugin as the named marketplace bundle.
+        for source in ("", "   "):
+            with self.subTest(source=source):
+                marketplace = json.dumps({
+                    "plugins": [{"name": "x", "source": source}]
+                }).encode("utf-8")
+                with patch(
+                    "urllib.request.urlopen",
+                    side_effect=serves({
+                        ".claude-plugin/marketplace.json": marketplace,
+                        ".claude-plugin/plugin.json": None,
+                    }),
+                ) as urlopen:
+                    self.assertEqual(
+                        MODULE.probe_claude_marketplace("example", "mods", "x"),
+                        (True, None),
+                    )
+                    self.assertEqual(urlopen.call_count, 1)
+
     def test_ignores_marketplace_sources_outside_the_repo(self) -> None:
         # Rooted paths must not be converted to repository-relative paths;
         # a matching local manifest in the test would otherwise be accepted.
