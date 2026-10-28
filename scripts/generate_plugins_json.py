@@ -190,6 +190,11 @@ def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, st
     # apparently valid raw.githubusercontent.com install targets.
     if source.startswith("/") or "\\" in source:
         return True, None
+    # Marketplace source directories must be literal repository-relative paths.
+    # Percent-encoded bytes can be decoded by an intermediary after the
+    # traversal check, changing which plugin manifest the URL resolves to.
+    if re.search(r"%[0-9a-fA-F]{2}", source):
+        return True, None
     parts = [part for part in source.split("/") if part not in {"", "."}]
     if any(part == ".." for part in parts):
         return True, None
