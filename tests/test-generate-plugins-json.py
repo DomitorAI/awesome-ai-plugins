@@ -1609,7 +1609,9 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             self.assertIsNone(
                 MODULE.probe_install_url("example", "mods")
             )
-            self.assertEqual(fetch.call_count, 1)
+            # Each supported candidate fails independently; one bad reply
+            # must not prematurely suppress the others or invent a manifest.
+            self.assertEqual(fetch.call_count, len(MODULE.INSTALL_PATH_CANDIDATES))
 
     def test_bad_nested_manifest_head_response_is_a_source_miss(self) -> None:
         import http.client
