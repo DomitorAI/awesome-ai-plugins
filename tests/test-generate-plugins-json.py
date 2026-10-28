@@ -330,6 +330,35 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             "https://github.com/example/shared-skills#readme",
         )
 
+    def test_native_duplicate_never_probes_unrelated_claude_bundle(self) -> None:
+        for category, description, platform in (
+            ("Agent Skills", "Native Agent Skills collection.", "agent-skills"),
+            ("Development & Workflow", "MCP server: Native stdio tools.", "mcp"),
+        ):
+            with self.subTest(platform=platform), tempfile.TemporaryDirectory() as directory:
+                readme = Path(directory) / "README.md"
+                readme.write_text(
+                    "## Community Plugins\n"
+                    f"### {category}\n"
+                    f"- [Shared](https://github.com/example/shared) - {description}\n"
+                )
+                upstream = [{
+                    "name": "Shared",
+                    "owner": "example",
+                    "repo": "shared",
+                    "platform": "codex",
+                    "ecosystems": ["codex"],
+                    "install_url": "https://raw.githubusercontent.com/example/shared/HEAD/.codex-plugin/plugin.json",
+                }]
+                with patch.object(
+                    MODULE, "probe_claude_marketplace",
+                    side_effect=AssertionError("native duplicate must not trigger Claude probe"),
+                ):
+                    plugins, added = MODULE.merge_readme_additions(upstream, readme)
+                self.assertEqual(added, 0)
+                self.assertEqual(len(plugins), 1)
+                self.assertEqual(plugins[0]["ecosystems"], ["codex", platform])
+
     def test_native_mcp_fallback_generates_no_invented_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
