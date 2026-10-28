@@ -1489,6 +1489,28 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             self.assertEqual((plugins, added), ([], 0))
             root_probe.assert_not_called()
 
+    def test_bad_http_status_line_is_a_source_miss_not_build_failure(self) -> None:
+        import http.client
+
+        class InvalidHttpResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                return None
+
+            def read(self, _limit):
+                raise http.client.BadStatusLine("broken upstream response")
+
+        with patch("urllib.request.urlopen", return_value=InvalidHttpResponse()) as fetch:
+            self.assertEqual(
+                MODULE.probe_claude_marketplace(
+                    "example", "mods", "sidequest", require_named_match=True,
+                ),
+                (False, None),
+            )
+            self.assertEqual(fetch.call_count, 1)
+
     def test_unreadable_marketplace_has_no_install_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             readme = claude_marketplace_readme(directory, "token-bar")
