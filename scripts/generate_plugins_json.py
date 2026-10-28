@@ -573,7 +573,13 @@ def merge_readme_additions(
                     ]
                     if len(same_name) == 1:
                         preferred = same_name[0]
-                    elif len(matches) == 1:
+                    elif len(matches) == 1 and not (
+                        matches[0].get("platform") == "claude-code"
+                        or "claude-code" in (matches[0].get("ecosystems") or [])
+                    ):
+                        # A native MCP/Skill listing is not the only Claude
+                        # bundle from this repo merely because it shares the
+                        # repository URL. Preserve its separate identity.
                         preferred = matches[0]
                 if preferred is None:
                     additions.append(normalize_plugin(plugin))
