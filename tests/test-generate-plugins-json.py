@@ -991,6 +991,40 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         self.assertEqual(len({p["install_url"] for p in plugins}), 2)
         self.assertEqual({p["platform"] for p in plugins}, {"claude-code"})
 
+    def test_ambiguous_marketplace_name_matches_fail_closed(self) -> None:
+        # Marketplace metadata may contain duplicate aliases. An exact
+        # case-insensitive match or slug-normalized match is not enough when
+        # two independent source directories claim the same name.
+        scenarios = (
+            (
+                "sidequest",
+                [{"name": "SideQuest", "source": "./plugins/a"},
+                 {"name": "sidequest", "source": "./plugins/b"}],
+            ),
+            (
+                "Code Base",
+                [{"name": "code_base", "source": "./plugins/a"},
+                 {"name": "code-base", "source": "./plugins/b"}],
+            ),
+        )
+        for name, entries in scenarios:
+            with self.subTest(name=name), patch(
+                "urllib.request.urlopen",
+                side_effect=serves({
+                    ".claude-plugin/marketplace.json": json.dumps(
+                        {"plugins": entries}
+                    ).encode("utf-8"),
+                }),
+            ) as urlopen:
+                self.assertEqual(
+                    MODULE.probe_claude_marketplace(
+                        "example", "mods", name, require_named_match=True
+                    ),
+                    (True, None),
+                )
+                # Never make an install-manifest request for an ambiguous name.
+                self.assertEqual(urlopen.call_count, 1)
+
     def test_same_manifest_cannot_be_published_under_two_names(self) -> None:
         marketplace = b'{"plugins":[{"name":"sidequest","source":"./plugins/sidequest"}]}'
         with tempfile.TemporaryDirectory() as directory:
