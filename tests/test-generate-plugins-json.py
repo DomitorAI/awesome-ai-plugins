@@ -730,6 +730,46 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         self.assertEqual([p["name"] for p in plugins], ["Codebase Mapper"])
         self.assertTrue(plugins[0].get("install_url"))
 
+    def test_same_name_codex_upstream_and_claude_bundle_are_distinct(self) -> None:
+        # A Codex feed entry must not suppress a separately installable Claude
+        # plugin that shares its repository and display name.
+        marketplace = (
+            b'{"plugins":[{"name":"sidequest","source":"./plugins/sidequest"}]}'
+        )
+        upstream = [{
+            "name": "sidequest",
+            "owner": "Eigenwise",
+            "repo": "eigenwise-toolshed",
+            "url": "https://github.com/Eigenwise/eigenwise-toolshed",
+            "platform": "codex",
+            "ecosystems": ["codex"],
+            "install_url": (
+                "https://raw.githubusercontent.com/Eigenwise/eigenwise-toolshed"
+                "/HEAD/.codex-plugin/plugin.json"
+            ),
+        }]
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n"
+                "### Development & Workflow\\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Claude plugin.\\n"
+            )
+            with patch(
+                "urllib.request.urlopen",
+                serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    "plugins/sidequest/.claude-plugin/plugin.json": None,
+                }),
+            ):
+                plugins, added = MODULE.merge_readme_additions(upstream, readme)
+
+        self.assertEqual(added, 1)
+        self.assertEqual(len(plugins), 2)
+        self.assertEqual([p["platform"] for p in plugins], ["codex", "claude-code"])
+        self.assertEqual(len({p["install_url"] for p in plugins}), 2)
+        self.assertEqual([p["name"] for p in plugins], ["sidequest", "sidequest"])
+
     def test_existing_upstream_bundle_and_distinct_nested_bundle(self) -> None:
         # A Codex/upstream feed may already list one real Claude marketplace
         # bundle. Another named manifest from that repository still qualifies.
