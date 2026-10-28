@@ -469,10 +469,6 @@ def merge_readme_additions(
     proof of a second installable plugin.
     """
     seen = {key for key in (normalize_repo_key(p) for p in upstream) if key}
-    seen_named = {
-        (normalize_repo_key(p), str(p.get("name", "")).strip().casefold())
-        for p in upstream
-    }
     additions: list[dict] = []
     for plugin in parse_plugins(readme_path):
         key = normalize_repo_key(plugin)
@@ -484,7 +480,20 @@ def merge_readme_additions(
             # A Claude marketplace can contain distinct installable plugins
             # even when all entries link to the same GitHub repository root.
             # Add another only after its unique nested manifest resolves.
-            if resolve_install_urls and named_key not in seen_named:
+            # An upstream Codex entry and a distinct Claude marketplace plugin
+            # may legitimately have the same name and repository. Suppress a
+            # same-name duplicate only when an existing entry already represents
+            # the Claude runtime. Distinct manifest URLs are checked below.
+            already_claude_named = any(
+                normalize_repo_key(existing) == key
+                and str(existing.get("name", "")).strip().casefold() == named_key[1]
+                and (
+                    existing.get("platform") == "claude-code"
+                    or "claude-code" in (existing.get("ecosystems") or [])
+                )
+                for existing in (*upstream, *additions)
+            )
+            if resolve_install_urls and not already_claude_named:
                 found, manifest_url = probe_claude_marketplace(
                     plugin["owner"], plugin["repo"], plugin["name"]
                 )
@@ -498,7 +507,6 @@ def merge_readme_additions(
                     plugin["platform"] = "claude-code"
                     plugin["ecosystems"] = ["claude-code"]
                     additions.append(normalize_plugin(plugin))
-                    seen_named.add(named_key)
                     continue
             # A repository can support multiple runtimes. Preserve a native
             # runtime contribution when the same repository already exists in
@@ -530,7 +538,6 @@ def merge_readme_additions(
             continue
 
         seen.add(key)
-        seen_named.add(named_key)
 
         if plugin.get("platform") in {MCP_PLATFORM, AGENT_SKILLS_PLATFORM}:
             additions.append(normalize_plugin(plugin))
