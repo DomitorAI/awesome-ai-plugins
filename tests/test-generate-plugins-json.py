@@ -302,6 +302,30 @@ def claude_marketplace_readme(directory: str, name: str) -> Path:
 
 
 class GeneratePluginsJsonTests(unittest.TestCase):
+    def test_manifest_probe_continues_after_one_candidate_network_failure(self) -> None:
+        # A timeout on an earlier manifest location must not suppress a
+        # separately verified later candidate for the same repository.
+        observed = []
+
+        def probe(request, *_args, **_kwargs):
+            observed.append(request.full_url)
+            if request.full_url.endswith("/first/plugin.json"):
+                raise urllib.error.URLError("first location temporarily unavailable")
+            if request.full_url.endswith("/second/plugin.json"):
+                return FakeResponse(200)
+            raise AssertionError(f"unexpected manifest path: {request.full_url}")
+
+        with patch("urllib.request.urlopen", side_effect=probe):
+            result = MODULE.probe_install_url(
+                "example", "mods", ("first/plugin.json", "second/plugin.json")
+            )
+
+        self.assertEqual(
+            result,
+            "https://raw.githubusercontent.com/example/mods/HEAD/second/plugin.json",
+        )
+        self.assertEqual(len(observed), 2)
+
     def test_general_community_entries_do_not_assume_codex(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
