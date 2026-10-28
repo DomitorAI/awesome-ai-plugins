@@ -198,7 +198,13 @@ def probe_claude_marketplace(
         return True, None
     # Untrusted marketplace JSON can contain control bytes which a later HTTP
     # request rejects as an invalid URL, aborting the entire catalog build.
-    if any(ord(char) < 0x20 or ord(char) == 0x7F for char in source):
+    # JSON also permits escaped unpaired UTF-16 surrogates; urllib's UTF-8
+    # path encoder raises UnicodeEncodeError before issuing an HTTP request.
+    if any(
+        ord(char) < 0x20 or ord(char) == 0x7F
+        or 0xD800 <= ord(char) <= 0xDFFF
+        for char in source
+    ):
         return True, None
     # Marketplace source directories must be literal repository-relative paths.
     # Percent-encoded bytes can be decoded by an intermediary after the
