@@ -17,6 +17,7 @@ import json
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -209,7 +210,10 @@ def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, st
         return True, None
 
     manifest_path = "/".join([*parts, CLAUDE_MANIFEST_PATH])
-    url = f"{base}/{manifest_path}"
+    # Quote literal non-ASCII and space characters in legitimate source folder
+    # names. Without this, Request(url) may throw before the probe's exception
+    # handler, aborting generation for every other plugin in the catalog.
+    url = f"{base}/{urllib.parse.quote(manifest_path, safe='/')}"
     req = urllib.request.Request(url, method="HEAD")
     try:
         with urllib.request.urlopen(req, timeout=INSTALL_URL_PROBE_TIMEOUT) as resp:
