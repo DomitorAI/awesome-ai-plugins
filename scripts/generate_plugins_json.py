@@ -234,7 +234,9 @@ def probe_claude_marketplace(
         with urllib.request.urlopen(req, timeout=INSTALL_URL_PROBE_TIMEOUT) as resp:
             if 200 <= resp.status < 300:
                 return True, url
-    except (urllib.error.URLError, TimeoutError, OSError):
+    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException):
+        # Broken HTTP status lines during a nested manifest HEAD are source
+        # misses, not a reason to abort unrelated marketplace generation.
         pass
     return True, None
 
