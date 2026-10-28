@@ -1507,6 +1507,28 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             self.assertEqual((plugins, added), ([], 0))
             root_probe.assert_not_called()
 
+    def test_bad_nested_manifest_head_response_is_a_source_miss(self) -> None:
+        import http.client
+
+        marketplace = b'{"plugins":[{"name":"sidequest","source":"plugins/sidequest"}]}'
+        read_marketplace = serves({".claude-plugin/marketplace.json": marketplace})
+
+        def malformed_manifest_probe(request, *args, **kwargs):
+            if getattr(request, "get_method", lambda: None)() == "HEAD":
+                raise http.client.BadStatusLine("broken nested manifest HEAD")
+            return read_marketplace(request, *args, **kwargs)
+
+        with patch(
+            "urllib.request.urlopen", side_effect=malformed_manifest_probe,
+        ) as fetch:
+            self.assertEqual(
+                MODULE.probe_claude_marketplace(
+                    "example", "mods", "sidequest", require_named_match=True,
+                ),
+                (True, None),
+            )
+            self.assertEqual(fetch.call_count, 2)
+
     def test_bad_http_status_line_is_a_source_miss_not_build_failure(self) -> None:
         import http.client
 
