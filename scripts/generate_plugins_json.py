@@ -780,16 +780,11 @@ def main(argv: list[str] | None = None):
             ]
             if len(named) == 1:
                 target = named[0]
-            elif len(matches) == 1 and (
-                matches[0].get("platform") != GROK_PLATFORM
-                and GROK_PLATFORM not in (matches[0].get("ecosystems") or [])
-            ):
-                # Preserve established single-bundle cross-runtime behavior,
-                # but never collapse a second distinct Grok plugin into it.
-                target = matches[0]
             else:
-                # Ambiguous multi-bundle source: preserve the Grok record
-                # with its own real identity rather than inventing support.
+                # A shared repository does not prove the Grok entry is the
+                # same installable plugin as an existing Claude/Codex entry.
+                # Even a single existing bundle must match by source name
+                # before it inherits another runtime's ecosystem flag.
                 plugins.append(gp)
                 continue
             ecosystems = target.get("ecosystems")
