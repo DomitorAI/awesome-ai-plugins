@@ -960,6 +960,33 @@ class GeneratePluginsJsonTests(unittest.TestCase):
              "plugins/quality-gate/.claude-plugin/plugin.json"],
         )
 
+    def test_unavailable_multi_plugin_marketplace_never_claims_root_manifest(self) -> None:
+        # A transient source error is not evidence that the first named row
+        # points at an unrelated root manifest in the same repository.
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\n### Development & Workflow\n"
+                "- [Sidequest](https://github.com/example/shared) - Tasks.\n"
+                "- [Quality Gate](https://github.com/example/shared) - Tests.\n"
+            )
+            with (
+                patch.object(
+                    MODULE, "probe_claude_marketplace", return_value=(False, None)
+                ) as source_probe,
+                patch.object(
+                    MODULE, "probe_install_url",
+                    return_value="https://raw.githubusercontent.com/example/shared/"
+                                 "HEAD/.codex-plugin/plugin.json",
+                ) as root_probe,
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+
+        self.assertEqual(added, 0)
+        self.assertEqual(plugins, [])
+        self.assertEqual(source_probe.call_count, 2)
+        root_probe.assert_not_called()
+
     def test_unverified_first_named_bundle_does_not_alias_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
