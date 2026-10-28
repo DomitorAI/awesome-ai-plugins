@@ -1380,7 +1380,7 @@ class GeneratePluginsJsonTests(unittest.TestCase):
     def test_rejects_json_escaped_unpaired_surrogates_before_url_encoding(self) -> None:
         # JSON accepts escaped lone surrogates but urllib.parse.quote cannot
         # encode them to UTF-8. One bad upstream entry must not abort the feed.
-        for source in ("plugins/\\ud800", "plugins/\\udfff"):
+        for source in ("plugins/" + chr(0xD800), "plugins/" + chr(0xDFFF)):
             with self.subTest(source=repr(source)):
                 marketplace = json.dumps({
                     "plugins": [{"name": "demo", "source": source}]
