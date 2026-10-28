@@ -201,7 +201,7 @@ def probe_claude_marketplace(
     # Absolute paths and Windows-style separators are not a source directory
     # inside the marketplace repository. Do not silently convert them into
     # apparently valid raw.githubusercontent.com install targets.
-    if source.startswith("/") or "\\" in source:
+    if source.startswith("/") or "\\" in source or ":" in source:
         return True, None
     # Untrusted marketplace JSON can contain control bytes which a later HTTP
     # request rejects as an invalid URL, aborting the entire catalog build.
