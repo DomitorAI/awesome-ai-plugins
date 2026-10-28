@@ -837,7 +837,9 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         )
 
     def test_ignores_marketplace_sources_outside_the_repo(self) -> None:
-        for source in ('"../elsewhere"', '"https://example.com/x"', '{"source": "github", "repo": "a/b"}'):
+        # Rooted paths must not be converted to repository-relative paths;
+        # a matching local manifest in the test would otherwise be accepted.
+        for source in ('"../elsewhere"', '"/elsewhere"', '"https://example.com/x"', '{"source": "github", "repo": "a/b"}'):
             marketplace = ('{"plugins": [{"name": "x", "source": %s}]}' % source).encode()
             with self.subTest(source=source), patch(
                 "urllib.request.urlopen",
