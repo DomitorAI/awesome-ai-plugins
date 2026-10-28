@@ -148,9 +148,9 @@ def probe_claude_marketplace(
             f"{base}/{CLAUDE_MARKETPLACE_PATH}", timeout=INSTALL_URL_PROBE_TIMEOUT
         ) as resp:
             payload = resp.read(CLAUDE_MARKETPLACE_MAX_BYTES + 1)
-    except (urllib.error.URLError, TimeoutError, OSError, http.client.IncompleteRead):
-        # A truncated upstream response must not abort generation for every
-        # other repository, or be treated as a verified marketplace manifest.
+    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException):
+        # A malformed/truncated upstream HTTP response must not abort generation
+        # for unrelated repos or count as a verified marketplace manifest.
         return False, None
     try:
         if len(payload) > CLAUDE_MARKETPLACE_MAX_BYTES:
