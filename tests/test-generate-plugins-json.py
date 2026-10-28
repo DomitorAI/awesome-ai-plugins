@@ -182,6 +182,64 @@ class GeneratorOutputSafetyTests(unittest.TestCase):
             ["claude-code"], ["claude-code", "grok"], ["grok"],
         ])
 
+    def test_single_unrelated_grok_entry_is_not_merged_into_claude(self):
+        # A single existing bundle is not proof that an unrelated Grok
+        # bundle in the same repository provides the Claude runtime.
+        claude = {
+            "name": "Sidequest", "owner": "example", "repo": "shared",
+            "platform": "claude-code", "ecosystems": ["claude-code"],
+        }
+        grok = {
+            "name": "Search Agent", "owner": "example", "repo": "shared",
+            "platform": "grok", "ecosystems": ["grok"],
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            with (
+                patch.object(MODULE, "load_codex_plugins", return_value=[claude]),
+                patch.object(MODULE, "load_grok_plugins", return_value=[grok]),
+                patch.object(
+                    MODULE, "merge_readme_additions",
+                    side_effect=lambda plugins, _readme, **_kwargs: (plugins, 0),
+                ),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                MODULE.main(["--output-dir", folder])
+            entries = json.loads(
+                (Path(folder) / "plugins.json").read_text()
+            )["plugins"]
+        self.assertEqual([p["name"] for p in entries], ["Sidequest", "Search Agent"])
+        self.assertEqual(
+            [p["ecosystems"] for p in entries], [["claude-code"], ["grok"]]
+        )
+
+    def test_single_matching_grok_entry_joins_existing_bundle(self):
+        # The exact same independently named source bundle still combines
+        # runtime support without publishing a duplicate plugin identity.
+        codex = {
+            "name": "Sidequest", "owner": "example", "repo": "shared",
+            "platform": "codex", "ecosystems": ["codex"],
+        }
+        grok = {
+            "name": "Sidequest", "owner": "example", "repo": "shared",
+            "platform": "grok", "ecosystems": ["grok"],
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            with (
+                patch.object(MODULE, "load_codex_plugins", return_value=[codex]),
+                patch.object(MODULE, "load_grok_plugins", return_value=[grok]),
+                patch.object(
+                    MODULE, "merge_readme_additions",
+                    side_effect=lambda plugins, _readme, **_kwargs: (plugins, 0),
+                ),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                MODULE.main(["--output-dir", folder])
+            entries = json.loads(
+                (Path(folder) / "plugins.json").read_text()
+            )["plugins"]
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["ecosystems"], ["codex", "grok"])
+
     def test_require_upstreams_with_both_sources_writes_both_feeds(self):
         codex = {"name": "Codex Demo", "owner": "test", "repo": "codex"}
         grok = {"name": "Grok Demo", "owner": "test", "repo": "grok"}
