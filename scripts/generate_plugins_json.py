@@ -773,22 +773,19 @@ def main(argv: list[str] | None = None):
                     existing_keys.add(key)
                 continue
             matches = [p for p in plugins if normalize_repo_key(p) == key]
-            grok_matches = [
-                p for p in matches
-                if p.get("platform") == GROK_PLATFORM
-                or GROK_PLATFORM in (p.get("ecosystems") or [])
-            ]
             named = [
                 p for p in matches
                 if str(p.get("name", "")).strip().casefold()
                 == str(gp.get("name", "")).strip().casefold()
             ]
-            if len(grok_matches) == 1:
-                target = grok_matches[0]
-            elif len(named) == 1:
+            if len(named) == 1:
                 target = named[0]
-            elif len(matches) == 1:
-                # Keep the established single-bundle multi-runtime behavior.
+            elif len(matches) == 1 and (
+                matches[0].get("platform") != GROK_PLATFORM
+                and GROK_PLATFORM not in (matches[0].get("ecosystems") or [])
+            ):
+                # Preserve established single-bundle cross-runtime behavior,
+                # but never collapse a second distinct Grok plugin into it.
                 target = matches[0]
             else:
                 # Ambiguous multi-bundle source: preserve the Grok record
