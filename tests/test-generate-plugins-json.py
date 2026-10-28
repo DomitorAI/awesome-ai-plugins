@@ -751,9 +751,9 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n"
-                "### Development & Workflow\\n"
-                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Claude plugin.\\n"
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
+                "- [sidequest](https://github.com/Eigenwise/eigenwise-toolshed) - Claude plugin.\n"
             )
             with patch(
                 "urllib.request.urlopen",
