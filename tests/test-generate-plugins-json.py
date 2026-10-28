@@ -675,6 +675,36 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             [p["name"] for p in marketplace_entries], ["sidequest", "quality-gate"]
         )
 
+    def test_readable_names_match_exact_unique_marketplace_slugs(self) -> None:
+        # Real Claude marketplaces use slug names while README catalog rows
+        # display human-readable labels. Both must resolve distinct manifests.
+        marketplace = (
+            b'{"plugins":['
+            b'{"name":"codebase-mapper","source":"./plugins/codebase-mapper"},'
+            b'{"name":"quality-gate","source":"./plugins/quality-gate"}]}'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n"
+                "### Development & Workflow\\n"
+                "- [Codebase Mapper](https://github.com/Eigenwise/eigenwise-toolshed) - Project map.\\n"
+                "- [Quality Gate](https://github.com/Eigenwise/eigenwise-toolshed) - Code checks.\\n"
+            )
+            with patch(
+                "urllib.request.urlopen",
+                serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    "plugins/codebase-mapper/.claude-plugin/plugin.json": None,
+                    "plugins/quality-gate/.claude-plugin/plugin.json": None,
+                }),
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+        self.assertEqual(added, 2)
+        self.assertEqual([p["name"] for p in plugins], ["Codebase Mapper", "Quality Gate"])
+        self.assertTrue(all(p.get("install_url") for p in plugins))
+        self.assertEqual(len({p["install_url"] for p in plugins}), 2)
+
     def test_existing_upstream_bundle_and_distinct_nested_bundle(self) -> None:
         # A Codex/upstream feed may already list one real Claude marketplace
         # bundle. Another named manifest from that repository still qualifies.
