@@ -908,6 +908,27 @@ class GeneratePluginsJsonTests(unittest.TestCase):
                         (True, None),
                     )
 
+    def test_rejects_control_characters_in_marketplace_sources(self) -> None:
+        # Reject invalid URL characters before even attempting the manifest
+        # probe; malformed upstream metadata must not abort catalog generation.
+        for source in ("plugins/name\\nbad", "plugins/name\\rhidden",
+                       "plugins/name\\tbad", "plugins/name\\u0000bad"):
+            with self.subTest(source=repr(source)):
+                marketplace = json.dumps({
+                    "plugins": [{"name": "x", "source": source}]
+                }).encode("utf-8")
+                with patch(
+                    "urllib.request.urlopen",
+                    side_effect=serves({
+                        ".claude-plugin/marketplace.json": marketplace,
+                    }),
+                ) as urlopen:
+                    self.assertEqual(
+                        MODULE.probe_claude_marketplace("example", "mods", "x"),
+                        (True, None),
+                    )
+                    self.assertEqual(urlopen.call_count, 1)
+
     def test_ignores_marketplace_whose_plugin_manifest_is_missing(self) -> None:
         marketplace = b'{"plugins": [{"name": "x", "source": "./x"}]}'
         with patch(
