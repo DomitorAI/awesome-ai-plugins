@@ -383,10 +383,10 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n"
-                "### Development & Workflow\\n"
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
                 "- [Native Tools](https://github.com/example/shared)"
-                " - MCP server: Native stdio tools.\\n"
+                " - MCP server: Native stdio tools.\n"
             )
             with patch.object(
                 MODULE, "probe_claude_marketplace",
