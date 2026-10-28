@@ -167,11 +167,11 @@ def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, st
         and e["name"].strip().casefold() == raw_target
     ]
     if not named:
-        slug_target = re.sub(r"[\\s_-]+", "-", raw_target)
+        slug_target = re.sub(r"[\s_-]+", "-", raw_target)
         named = [
             e for e in entries
             if isinstance(e.get("name"), str)
-            and re.sub(r"[\\s_-]+", "-", e["name"].strip().casefold()) == slug_target
+            and re.sub(r"[\s_-]+", "-", e["name"].strip().casefold()) == slug_target
         ]
     if len(named) == 1:
         entry = named[0]
