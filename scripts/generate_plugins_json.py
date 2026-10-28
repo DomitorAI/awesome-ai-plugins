@@ -114,9 +114,9 @@ def probe_install_url(
         except urllib.error.HTTPError:
             continue
         except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException):
-            # Malformed upstream HTTP replies are not verified manifests.
-            # Keep unrelated catalog generation alive on a failed HEAD probe.
-            return None
+            # One broken candidate must not hide a valid manifest at another
+            # supported location. Return only a URL whose HEAD actually passed.
+            continue
     return None
 
 
