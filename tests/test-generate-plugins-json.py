@@ -1477,9 +1477,9 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             readme = Path(folder) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n### Development & Workflow\\n"
-                "- [Sidequest](https://github.com/example/mods) - Tasks.\\n"
-                "- [Quality Gate](https://github.com/example/mods) - Tests.\\n"
+                "## Community Plugins\n### Development & Workflow\n"
+                "- [Sidequest](https://github.com/example/mods) - Tasks.\n"
+                "- [Quality Gate](https://github.com/example/mods) - Tests.\n"
             )
             with (
                 patch("urllib.request.urlopen", return_value=TruncatedResponse()),
