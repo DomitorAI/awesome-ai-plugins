@@ -705,6 +705,31 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         self.assertTrue(all(p.get("install_url") for p in plugins))
         self.assertEqual(len({p["install_url"] for p in plugins}), 2)
 
+    def test_readable_aliases_deduplicate_one_verified_manifest(self) -> None:
+        # Display labels and source slugs must not become two catalog entries
+        # for the same installable bundle in a shared marketplace.
+        marketplace = b'{"plugins":[{"name":"codebase-mapper","source":"./plugins/codebase-mapper"}]}'
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
+                "- [Codebase Mapper](https://github.com/Eigenwise/eigenwise-toolshed) - Project map.\n"
+                "- [codebase-mapper](https://github.com/Eigenwise/eigenwise-toolshed) - Alias.\n"
+            )
+            with patch(
+                "urllib.request.urlopen",
+                serves({
+                    ".claude-plugin/marketplace.json": marketplace,
+                    "plugins/codebase-mapper/.claude-plugin/plugin.json": None,
+                }),
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+
+        self.assertEqual(added, 1)
+        self.assertEqual([p["name"] for p in plugins], ["Codebase Mapper"])
+        self.assertTrue(plugins[0].get("install_url"))
+
     def test_existing_upstream_bundle_and_distinct_nested_bundle(self) -> None:
         # A Codex/upstream feed may already list one real Claude marketplace
         # bundle. Another named manifest from that repository still qualifies.
