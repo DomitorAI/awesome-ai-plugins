@@ -761,22 +761,46 @@ def main(argv: list[str] | None = None):
         raise RuntimeError("Grok upstream feed is unavailable or empty; refusing to rewrite published catalogs")
     if grok_plugins:
         print(f"Found {len(grok_plugins)} plugins from grok upstream catalog")
-        # Deduplicate by owner/repo: grok plugins that also exist in codex
-        # are tagged with both ecosystems rather than duplicated
+        # A repository can contain several independent plugin bundles.
+        # Do not attach Grok support to the first unrelated Claude/Codex
+        # bundle just because every entry shares one GitHub repository URL.
         existing_keys = {normalize_repo_key(p) for p in plugins}
         for gp in grok_plugins:
             key = normalize_repo_key(gp)
-            if key and key in existing_keys:
-                # Plugin exists in both ecosystems: add grok to ecosystems
-                for existing in plugins:
-                    if normalize_repo_key(existing) == key:
-                        ecos = existing.get("ecosystems", [])
-                        if GROK_PLATFORM not in ecos:
-                            ecos.append(GROK_PLATFORM)
-                            existing["ecosystems"] = ecos
-                        break
-            else:
+            if not key or key not in existing_keys:
                 plugins.append(gp)
+                if key:
+                    existing_keys.add(key)
+                continue
+            matches = [p for p in plugins if normalize_repo_key(p) == key]
+            grok_matches = [
+                p for p in matches
+                if p.get("platform") == GROK_PLATFORM
+                or GROK_PLATFORM in (p.get("ecosystems") or [])
+            ]
+            named = [
+                p for p in matches
+                if str(p.get("name", "")).strip().casefold()
+                == str(gp.get("name", "")).strip().casefold()
+            ]
+            if len(grok_matches) == 1:
+                target = grok_matches[0]
+            elif len(named) == 1:
+                target = named[0]
+            elif len(matches) == 1:
+                # Keep the established single-bundle multi-runtime behavior.
+                target = matches[0]
+            else:
+                # Ambiguous multi-bundle source: preserve the Grok record
+                # with its own real identity rather than inventing support.
+                plugins.append(gp)
+                continue
+            ecosystems = target.get("ecosystems")
+            if not isinstance(ecosystems, list):
+                ecosystems = []
+            if GROK_PLATFORM not in ecosystems:
+                ecosystems.append(GROK_PLATFORM)
+                target["ecosystems"] = ecosystems
         print(f"Total after grok merge: {len(plugins)}")
     elif args.offline:
         print("Offline mode skips the Grok upstream catalog")
