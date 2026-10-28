@@ -185,6 +185,11 @@ def probe_claude_marketplace(owner: str, repo: str, name: str) -> tuple[bool, st
     source = entry.get("source")
     if not isinstance(source, str) or "://" in source:
         return True, None
+    # Absolute paths and Windows-style separators are not a source directory
+    # inside the marketplace repository. Do not silently convert them into
+    # apparently valid raw.githubusercontent.com install targets.
+    if source.startswith("/") or "\\" in source:
+        return True, None
     parts = [part for part in source.split("/") if part not in {"", "."}]
     if any(part == ".." for part in parts):
         return True, None
