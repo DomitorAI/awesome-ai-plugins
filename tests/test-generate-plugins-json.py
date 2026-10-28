@@ -850,6 +850,24 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             ):
                 self.assertEqual(MODULE.probe_claude_marketplace("example", "mods", "x"), (True, None))
 
+    def test_rejects_percent_encoded_marketplace_paths(self) -> None:
+        # Marketplace source is a directory path, not a URL. Encoded dot/slash
+        # segments can be decoded after the initial traversal check.
+        for source in ("plugins/%2e%2e/private", "plugins/%2fprivate", "plugins/%252e%252e/private"):
+            with self.subTest(source=source):
+                marketplace = ('{"plugins":[{"name":"x","source":"%s"}]}' % source).encode()
+                with patch(
+                    "urllib.request.urlopen",
+                    serves({
+                        ".claude-plugin/marketplace.json": marketplace,
+                        f"{source}/.claude-plugin/plugin.json": None,
+                    }),
+                ):
+                    self.assertEqual(
+                        MODULE.probe_claude_marketplace("example", "mods", "x"),
+                        (True, None),
+                    )
+
     def test_ignores_marketplace_whose_plugin_manifest_is_missing(self) -> None:
         marketplace = b'{"plugins": [{"name": "x", "source": "./x"}]}'
         with patch(
