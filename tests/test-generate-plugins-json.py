@@ -406,6 +406,47 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         self.assertIn("installation_url", plugins[2])
         self.assertNotIn("install_url", plugins[2])
 
+    def test_same_named_native_bundle_targets_matching_claude_manifest(self) -> None:
+        # When a native integration genuinely shares a display identity with
+        # one of two Claude bundles, merge only into that named bundle.
+        upstream = [
+            {
+                "name": name,
+                "owner": "example",
+                "repo": "shared",
+                "platform": "claude-code",
+                "ecosystems": ["claude-code"],
+                "install_url": (
+                    "https://raw.githubusercontent.com/example/shared/HEAD/"
+                    f"plugins/{slug}/.claude-plugin/plugin.json"
+                ),
+            }
+            for name, slug in (
+                ("Sidequest", "sidequest"),
+                ("Quality Gate", "quality-gate"),
+            )
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            readme = Path(directory) / "README.md"
+            readme.write_text(
+                "## Community Plugins\n"
+                "### Development & Workflow\n"
+                "- [Quality Gate](https://github.com/example/shared)"
+                " - MCP server: Same named native runtime.\n"
+            )
+            with patch.object(
+                MODULE, "probe_claude_marketplace",
+                side_effect=AssertionError("native MCP must not probe Claude"),
+            ):
+                plugins, added = MODULE.merge_readme_additions(upstream, readme)
+        self.assertEqual(added, 0)
+        self.assertEqual(len(plugins), 2)
+        self.assertEqual(plugins[0]["ecosystems"], ["claude-code"])
+        self.assertEqual(plugins[1]["ecosystems"], ["claude-code", "mcp"])
+        self.assertEqual(plugins[1]["platform"], "claude-code")
+        self.assertIn("installation_url", plugins[1])
+        self.assertNotIn("installation_url", plugins[0])
+
     def test_native_mcp_fallback_generates_no_invented_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
