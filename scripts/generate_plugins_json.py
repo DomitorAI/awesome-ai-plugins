@@ -543,21 +543,47 @@ def merge_readme_additions(
                 OPENCODE_PLATFORM,
             }:
                 platform = plugin["platform"]
-                for existing in (*upstream, *additions):
-                    if normalize_repo_key(existing) != key:
-                        continue
-                    ecosystems = existing.get("ecosystems")
-                    if not isinstance(ecosystems, list) or not ecosystems:
-                        existing_platform = existing.get("platform")
-                        ecosystems = [existing_platform] if existing_platform else []
-                        existing["ecosystems"] = ecosystems
-                    if not existing.get("platform"):
-                        existing["platform"] = platform
-                    if platform not in ecosystems:
-                        ecosystems.append(platform)
-                    if platform in {MCP_PLATFORM, AGENT_SKILLS_PLATFORM}:
-                        existing["installation_url"] = plugin["installation_url"]
-                    break
+                matches = [
+                    existing for existing in (*upstream, *additions)
+                    if normalize_repo_key(existing) == key
+                ]
+                # When one repository has several distinct Claude bundles, a
+                # native MCP/skills entry must not inherit an arbitrary Claude
+                # bundle's install URL and identity. Prefer the same runtime
+                # or a unique same-name bundle; otherwise retain a separate
+                # native entry with its own installation documentation.
+                preferred = next((
+                    existing for existing in matches
+                    if existing.get("platform") == platform
+                    or (
+                        isinstance(existing.get("ecosystems"), list)
+                        and platform in existing["ecosystems"]
+                    )
+                ), None)
+                if preferred is None:
+                    same_name = [
+                        existing for existing in matches
+                        if str(existing.get("name", "")).strip().casefold() == named_key[1]
+                    ]
+                    if len(same_name) == 1:
+                        preferred = same_name[0]
+                    elif len(matches) == 1:
+                        preferred = matches[0]
+                if preferred is None:
+                    additions.append(normalize_plugin(plugin))
+                    continue
+
+                ecosystems = preferred.get("ecosystems")
+                if not isinstance(ecosystems, list) or not ecosystems:
+                    existing_platform = preferred.get("platform")
+                    ecosystems = [existing_platform] if existing_platform else []
+                    preferred["ecosystems"] = ecosystems
+                if not preferred.get("platform"):
+                    preferred["platform"] = platform
+                if platform not in ecosystems:
+                    ecosystems.append(platform)
+                if platform in {MCP_PLATFORM, AGENT_SKILLS_PLATFORM}:
+                    preferred["installation_url"] = plugin["installation_url"]
             continue
 
         seen.add(key)
