@@ -1284,7 +1284,7 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         marketplace = b'{"plugins":[{"name":"bar","source":"plugins/bar"},"invalid"]}'
         with patch(
             "urllib.request.urlopen",
-            serves({
+            side_effect=serves({
                 ".claude-plugin/marketplace.json": marketplace,
                 "plugins/bar/.claude-plugin/plugin.json": None,
             }),
