@@ -908,6 +908,29 @@ class GeneratePluginsJsonTests(unittest.TestCase):
                         (True, None),
                     )
 
+    def test_quotes_literal_spaced_and_unicode_marketplace_directories(self) -> None:
+        for source, encoded in (
+            ("plugins/my workspace", "plugins/my%20workspace"),
+            ("plugins/café", "plugins/caf%C3%A9"),
+        ):
+            with self.subTest(source=source):
+                marketplace = json.dumps({
+                    "plugins": [{"name": "demo", "source": source}]
+                }).encode("utf-8")
+                with patch(
+                    "urllib.request.urlopen",
+                    side_effect=serves({
+                        ".claude-plugin/marketplace.json": marketplace,
+                        f"{encoded}/.claude-plugin/plugin.json": None,
+                    }),
+                ) as urlopen:
+                    self.assertEqual(
+                        MODULE.probe_claude_marketplace("example", "mods", "demo"),
+                        (True, "https://raw.githubusercontent.com/example/mods/HEAD/"
+                         f"{encoded}/.claude-plugin/plugin.json"),
+                    )
+                    self.assertEqual(urlopen.call_count, 2)
+
     def test_rejects_url_delimiters_in_marketplace_source_paths(self) -> None:
         # A query or fragment must not change which manifest a raw URL probes.
         # Simulate a 200 response for the malformed target: successful HTTP
