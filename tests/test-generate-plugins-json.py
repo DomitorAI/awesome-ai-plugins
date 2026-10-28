@@ -798,9 +798,9 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n### Development & Workflow\\n"
-                "- [Sidequest](https://github.com/example/shared) - Tasks.\\n"
-                "- [Quality Gate](https://github.com/example/shared) - Tests.\\n"
+                "## Community Plugins\n### Development & Workflow\n"
+                "- [Sidequest](https://github.com/example/shared) - Tasks.\n"
+                "- [Quality Gate](https://github.com/example/shared) - Tests.\n"
             )
             def named_probe(owner, repo, name, *, require_named_match=False):
                 self.assertTrue(require_named_match)
@@ -832,9 +832,9 @@ class GeneratePluginsJsonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             readme = Path(directory) / "README.md"
             readme.write_text(
-                "## Community Plugins\\n### Development & Workflow\\n"
-                "- [Unlisted](https://github.com/example/shared) - Unknown.\\n"
-                "- [Sidequest](https://github.com/example/shared) - Tasks.\\n"
+                "## Community Plugins\n### Development & Workflow\n"
+                "- [Unlisted](https://github.com/example/shared) - Unknown.\n"
+                "- [Sidequest](https://github.com/example/shared) - Tasks.\n"
             )
             def named_probe(owner, repo, name, *, require_named_match=False):
                 self.assertTrue(require_named_match)
