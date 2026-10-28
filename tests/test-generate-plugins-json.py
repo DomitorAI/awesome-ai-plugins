@@ -1278,6 +1278,24 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             "/HEAD/plugins/bar/.claude-plugin/plugin.json",
         )
 
+    def test_malformed_extra_marketplace_entry_is_not_singleton(self) -> None:
+        # A malformed second record cannot turn a multi-entry marketplace
+        # into a single plugin whose manifest is misattributed to a README alias.
+        marketplace = b'{"plugins":[{"name":"bar","source":"plugins/bar"},"invalid"]}'
+        with patch(
+            "urllib.request.urlopen",
+            serves({
+                ".claude-plugin/marketplace.json": marketplace,
+                "plugins/bar/.claude-plugin/plugin.json": None,
+            }),
+        ) as urlopen:
+            found, url = MODULE.probe_claude_marketplace(
+                "example", "mods", "Invented Alias"
+            )
+        self.assertTrue(found)
+        self.assertIsNone(url)
+        self.assertEqual(urlopen.call_count, 1)
+
     def test_blank_marketplace_source_never_uses_root_manifest(self) -> None:
         # Empty or whitespace-only source must not accidentally claim a
         # repository-root plugin as the named marketplace bundle.
