@@ -1563,6 +1563,23 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             )
             self.assertEqual(fetch.call_count, 1)
 
+    def test_excessively_nested_marketplace_does_not_abort_catalog(self) -> None:
+        # A bounded HTTP body can still have enough nesting for json.loads
+        # to raise RecursionError. Ignore this source, not the full registry.
+        malformed = (
+            b'{"plugins":' + b'[' * 12000 + b'0'
+            + b']' * 12000 + b'}'
+        )
+        with patch(
+            "urllib.request.urlopen",
+            serves({".claude-plugin/marketplace.json": malformed}),
+        ) as urlopen:
+            self.assertEqual(
+                MODULE.probe_claude_marketplace("example", "mods", "demo"),
+                (True, None),
+            )
+            self.assertEqual(urlopen.call_count, 1)
+
     def test_unreadable_marketplace_has_no_install_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             readme = claude_marketplace_readme(directory, "token-bar")
