@@ -1472,6 +1472,23 @@ class GeneratePluginsJsonTests(unittest.TestCase):
             )
             self.assertEqual(fetch.call_count, 1)
 
+        # An interrupted marketplace read also cannot assign a generic root
+        # Codex manifest to either named Claude bundle from the same repo.
+        with tempfile.TemporaryDirectory() as folder:
+            readme = Path(folder) / "README.md"
+            readme.write_text(
+                "## Community Plugins\\n### Development & Workflow\\n"
+                "- [Sidequest](https://github.com/example/mods) - Tasks.\\n"
+                "- [Quality Gate](https://github.com/example/mods) - Tests.\\n"
+            )
+            with (
+                patch("urllib.request.urlopen", return_value=TruncatedResponse()),
+                patch.object(MODULE, "probe_install_url") as root_probe,
+            ):
+                plugins, added = MODULE.merge_readme_additions([], readme)
+            self.assertEqual((plugins, added), ([], 0))
+            root_probe.assert_not_called()
+
     def test_unreadable_marketplace_has_no_install_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             readme = claude_marketplace_readme(directory, "token-bar")
