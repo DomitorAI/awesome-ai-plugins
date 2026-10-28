@@ -488,7 +488,13 @@ def merge_readme_additions(
     """
     seen = {key for key in (normalize_repo_key(p) for p in upstream) if key}
     additions: list[dict] = []
-    for plugin in parse_plugins(readme_path):
+    readme_plugins = parse_plugins(readme_path)
+    readme_repo_counts: dict[str, int] = {}
+    for item in readme_plugins:
+        repo_key = normalize_repo_key(item)
+        if repo_key:
+            readme_repo_counts[repo_key] = readme_repo_counts.get(repo_key, 0) + 1
+    for plugin in readme_plugins:
         key = normalize_repo_key(plugin)
         if not key:
             continue
@@ -626,6 +632,30 @@ def merge_readme_additions(
                 plugin.pop("install_url", None)
             additions.append(normalize_plugin(plugin))
             continue
+
+        if (
+            resolve_install_urls
+            and readme_repo_counts.get(key, 0) > 1
+            and plugin.get("platform") in (None, "claude-code")
+        ):
+            # A shared repo can also expose an unrelated root manifest.
+            # Resolve the named nested marketplace bundle *before* a generic
+            # root HEAD probe assigns that manifest to the first README row.
+            marketplace_found, named_url = probe_claude_marketplace(
+                plugin["owner"], plugin["repo"], plugin["name"],
+                require_named_match=True,
+            )
+            if marketplace_found:
+                if not named_url:
+                    # No verified identity for this named bundle; fail closed
+                    # instead of assigning its row another root plugin.
+                    continue
+                plugin["install_url"] = named_url
+                plugin.pop("installation_url", None)
+                plugin["platform"] = "claude-code"
+                plugin["ecosystems"] = ["claude-code"]
+                additions.append(normalize_plugin(plugin))
+                continue
 
         probed = probe_install_url(plugin["owner"], plugin["repo"])
         if not probed:
