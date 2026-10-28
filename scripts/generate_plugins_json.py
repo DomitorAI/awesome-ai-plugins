@@ -651,17 +651,18 @@ def merge_readme_additions(
                 plugin["owner"], plugin["repo"], plugin["name"],
                 require_named_match=True,
             )
-            if marketplace_found:
-                if not named_url:
-                    # No verified identity for this named bundle; fail closed
-                    # instead of assigning its row another root plugin.
-                    continue
-                plugin["install_url"] = named_url
-                plugin.pop("installation_url", None)
-                plugin["platform"] = "claude-code"
-                plugin["ecosystems"] = ["claude-code"]
-                additions.append(normalize_plugin(plugin))
+            # Every entry of a multi-listing repository needs its own
+            # independently identified source manifest. A failed marketplace
+            # request is not permission to assign the generic root manifest
+            # to the first arbitrary README row.
+            if not marketplace_found or not named_url:
                 continue
+            plugin["install_url"] = named_url
+            plugin.pop("installation_url", None)
+            plugin["platform"] = "claude-code"
+            plugin["ecosystems"] = ["claude-code"]
+            additions.append(normalize_plugin(plugin))
+            continue
 
         probed = probe_install_url(plugin["owner"], plugin["repo"])
         if not probed:
